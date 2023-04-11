@@ -256,39 +256,104 @@ function alituHitObstacle() {
     }
 }
 
-function displayQRCode(data) {
+async function displayQRCode(data, blackRect) {
     const qrTypeNumber = 0;
     const qrErrorCorrectLevel = 'H';
     const qr = qrcode(qrTypeNumber, qrErrorCorrectLevel);
     qr.addData(data);
     qr.make();
     const qrImageDataUri = qr.createDataURL(8, 4);
-
+  
+    // Remove the existing 'qr_code' texture if it exists
+    if (this.textures.exists('qr_code')) {
+      this.textures.remove('qr_code');
+    }
+  
+    // Add the new 'qr_code' texture
     this.textures.addBase64('qr_code', qrImageDataUri).once('onload', () => {
-        const qrImage = this.add.image(config.scale.width / 2, config.scale.height / 2, 'qr_code');
-        qrImage.setOrigin(0.5, 0.5);
-        qrImage.setScale(0.5);
-        qrImage.setInteractive();
-        qrImage.on('pointerdown', () => {
-            qrImage.destroy();
-            this.scene.restart();
-            score = 0;
-            isGameOver = false;
-        });
+      // Update the QR code image position
+      const qrImage = this.add.image(config.scale.width * 0.55, this.qrInstructionText.y + this.qrInstructionText.height + 10, 'qr_code');
+      qrImage.setOrigin(0, 0);
+      qrImage.setScale(0.5);
+      qrImage.setInteractive();
+      qrImage.on('pointerdown', () => {
+        blackRect.destroy();
+        qrImage.destroy();
+        this.gameOverText.destroy();
+        this.finalScoreText.destroy();
+        this.qrInstructionText.destroy();
+        this.scene.restart();
+        score = 0;
+        isGameOver = false;
+      });
     }, this);
 }
 
+  
 
+function fadeToBlack(scene, callback) {
+    const blackRect = scene.add.rectangle(0, 0, config.scale.width, config.scale.height, 0x000000);
+    blackRect.setOrigin(0, 0);
+    blackRect.alpha = 0;
+    scene.tweens.add({
+      targets: blackRect,
+      alpha: 1,
+      duration: 1000,
+      onComplete: () => {
+        callback(blackRect); // Call the provided callback function after the fade in is complete
+      },
+    });
+  }
 
-async function gameOver() {
+  function createSpacebarMessage(scene) {
+    const spacebarBg = scene.add.rectangle(config.scale.width / 2, config.scale.height * 0.9, config.scale.width * 0.5, 40, 0xffffff);
+    spacebarBg.setOrigin(0.5, 0.5);
+  
+    const spacebarText = scene.add.text(config.scale.width / 2, config.scale.height * 0.9, 'Next player, press the button', { fontSize: '16px', fill: '#000000' });
+    spacebarText.setOrigin(0.5, 0.5);
+  
+    return { spacebarBg, spacebarText };
+  }
+
+  async function gameOver() {
     this.physics.pause();
     this.alitu.play('run', false);
-    this.gameOverText = this.add.text(config.scale.width / 2, config.scale.height / 2, 'Game Over', { fontSize: '64px', fill: '#ff0000' }).setOrigin(0.5, 0.5);
+  
+    // Add the fade to black effect before displaying the game over text
+    await new Promise((resolve) => fadeToBlack(this, resolve)).then((blackRect) => {
+      this.gameOverText = this.add.text(config.scale.width * 0.05, config.scale.height / 4, 'Game Over', { fontSize: '64px', fill: '#ff0000' }).setOrigin(0, 0.5);
+      this.finalScoreText = this.add.text(config.scale.width * 0.05, config.scale.height / 4 + 70, 'Score: ' + score, { fontSize: '32px', fill: '#ffffff' }).setOrigin(0, 0.5);
+  
+      const url = `https://yourwebsite.com/submit-score?score=${score}`;
+      displayQRCode.call(this, url, blackRect);
+  
+      this.qrInstructionText = this.add.text(config.scale.width * 0.55, config.scale.height / 4, 'Scan the QR code below to join the leaderboard:', { fontSize: '16px', fill: '#ffffff', wordWrap: { width: config.scale.width * 0.4 } }).setOrigin(0, 0.5);
+  
+      // Get the bounds of the qrInstructionText
+      const instructionsBounds = this.qrInstructionText.getBounds();
 
-    const url = `https://yourwebsite.com/submit-score?score=${score}`;
-    await displayQRCode.call(this, url);
-}
+      // Update the QR code image position
+      this.textures.once('addtexturekey', () => {
+        const qrImage = this.add.image(instructionsBounds.x, instructionsBounds.y + instructionsBounds.height + 10, 'qr_code');
+        qrImage.setOrigin(0, 0);
+        qrImage.setScale(0.5);
+        qrImage.setInteractive();
+      }, this);
+  
+      // Enable the spacebar key to restart the game
+      this.input.keyboard.on('keydown-SPACE', () => {
+        blackRect.destroy();
+        this.gameOverText.destroy();
+        this.finalScoreText.destroy();
+        this.qrInstructionText.destroy();
+        this.scene.restart();
+        score = 0;
+        isGameOver = false;
+      });
+    });
+  }
 
+  
 
 // TO DO:
 
@@ -302,3 +367,5 @@ async function gameOver() {
 // 7. Add an intro where Alitu is chasing a truck throwing things off the back
 // 8. Make some of the obstacles good and others bad
 
+
+// A green van, dropping green droids and flying joe rogans
