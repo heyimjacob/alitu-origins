@@ -324,7 +324,7 @@ function fadeToBlack(scene, callback) {
       this.gameOverText = this.add.text(config.scale.width * 0.05, config.scale.height / 4, 'Game Over', { fontSize: '64px', fill: '#ff0000' }).setOrigin(0, 0.5);
       this.finalScoreText = this.add.text(config.scale.width * 0.05, config.scale.height / 4 + 70, 'Score: ' + score, { fontSize: '32px', fill: '#ffffff' }).setOrigin(0, 0.5);
   
-      const url = `https://yourwebsite.com/submit-score?score=${score}`;
+      const url = `https://colingray663784.typeform.com/to/NjjCTE6D#score=${score}`;
       displayQRCode.call(this, url, blackRect);
   
       this.qrInstructionText = this.add.text(config.scale.width * 0.55, config.scale.height / 4, 'Scan the QR code below to join the leaderboard:', { fontSize: '16px', fill: '#ffffff', wordWrap: { width: config.scale.width * 0.4 } }).setOrigin(0, 0.5);
