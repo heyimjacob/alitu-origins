@@ -14,6 +14,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 800 },
+            debug: true,
             
         },
     },
@@ -24,6 +25,7 @@ const config = {
     },
 };
 const game = new Phaser.Game(config);
+
 
 function preload() {
     // Load game assets here
@@ -67,9 +69,16 @@ function update() {
 // Loading assets
 function loadBackgroundLayers() {
     for (let i = 1; i <= 5; i++) {
-        this.load.image(`bg_layer${i}`, `assets/city${i}.png`);
+        if (i === 4) {
+            for (let j = 0; j < 11; j++) {
+                this.load.image(`bg_layer${i}_${j}`, `assets/city${i}_${j}.png`);
+            }
+        } else {
+            this.load.image(`bg_layer${i}`, `assets/city${i}.png`);
+        }
     }
 }
+
 
 function loadAlitu() {
     this.load.spritesheet('alitu_run', 'assets/alitu_run.png', { frameWidth: 38, frameHeight: 64 });
@@ -107,31 +116,44 @@ function createBackgroundLayers() {
     const speedFactors = [0.1, 0.3, 0.5, 0.7, 0.9];
 
     for (let i = 0; i < 5; i++) {
-        const layer1 = this.add.image(0, 0, `bg_layer${i + 1}`);
-        
-        // Calculate the scale factors based on the aspect ratio of the original image
-        const scaleX = config.scale.width / layer1.width;
-        const scaleY = config.scale.height / layer1.height;
-        const scale = Math.min(scaleX, scaleY);
-
-        layer1.setScale(scale);
-
-        // Set the initial position of the second image based on the scaled width of the first image
-        const layer2 = this.add.image(layer1.width * scale, 0, `bg_layer${i + 1}`);
-        layer2.setScale(scale);
-
-        layer1.setOrigin(0, 0);
-        layer2.setOrigin(0, 0);
-        this.backgroundLayers.push({ layer1, layer2, speedFactor: speedFactors[i] });
+        if (i === 3) {
+            let j = 0;
+            const layer1 = this.add.image(0, 0, `bg_layer${i + 1}_${j}`);
+            const scaleX = config.scale.width / layer1.width;
+            const scaleY = config.scale.height / layer1.height;
+            const scale = Math.min(scaleX, scaleY);
+            layer1.setScale(scale);
+            const layer2 = this.add.image(layer1.width * scale, 0, `bg_layer${i + 1}_${(j + 1) % 11}`);
+            layer2.setScale(scale);
+            layer1.setOrigin(0, 0);
+            layer2.setOrigin(0, 0);
+            this.backgroundLayers.push({ layer1, layer2, speedFactor: speedFactors[i], variation: j });
+        } else {
+            const layer1 = this.add.image(0, 0, `bg_layer${i + 1}`);
+            const scaleX = config.scale.width / layer1.width;
+            const scaleY = config.scale.height / layer1.height;
+            const scale = Math.min(scaleX, scaleY);
+            layer1.setScale(scale);
+            const layer2 = this.add.image(layer1.width * scale, 0, `bg_layer${i + 1}`);
+            layer2.setScale(scale);
+            layer1.setOrigin(0, 0);
+            layer2.setOrigin(0, 0);
+            this.backgroundLayers.push({ layer1, layer2, speedFactor: speedFactors[i] });
+        }
     }
 }
 
-
-
 function createAlitu() {
-    this.alitu = this.physics.add.sprite(100, config.scale.height - 64, 'alitu_run');
+    this.alitu = this.physics.add.sprite(100, config.scale.height - 120, 'alitu_run');
+    this.alitu.setScale(1.2);  // Add this line
     this.alitu.setCollideWorldBounds(true);
-    
+
+    // Calculate the new width for the collider
+    const colliderWidth = this.alitu.width * 0.3; 
+
+    // Set the collider's size and offset
+    this.alitu.body.setSize(colliderWidth, this.alitu.height);
+    this.alitu.body.setOffset((this.alitu.width - colliderWidth) / 2, 0);
 
     this.anims.create({
         key: 'run',
@@ -145,10 +167,10 @@ function createAlitu() {
         frames: this.anims.generateFrameNumbers('alitu_jump', { start: 0, end: 3 }),
         frameRate: 10,
     });
-    
 
     this.alitu.play('run');
 }
+
 
 function createFactoryFloor() {
     const floorTileWidth = 32;
@@ -190,20 +212,32 @@ function createUI() {
 
 // Update game objects
 function updateBackgroundLayers() {
-    this.backgroundLayers.forEach(({ layer1, layer2, speedFactor }) => {
+    this.backgroundLayers.forEach((bgLayer) => {
+        const { layer1, layer2, speedFactor, variation } = bgLayer;
         layer1.x -= speedFactor;
         layer2.x -= speedFactor;
 
         // Reposition the layer when it's off the screen
         if (layer1.x <= -layer1.width * layer1.scaleX) {
             layer1.x = layer2.x + layer2.width * layer2.scaleX - 1;
+            if (variation !== undefined) {
+                bgLayer.variation = (variation + 1) % 11; // Update the variation directly
+                layer1.setTexture(`bg_layer4_${bgLayer.variation}`);
+            }
         }
 
         if (layer2.x <= -layer2.width * layer2.scaleX) {
             layer2.x = layer1.x + layer1.width * layer1.scaleX - 1;
+            if (variation !== undefined) {
+                bgLayer.variation = (variation + 1) % 11; // Update the variation directly
+                layer2.setTexture(`bg_layer4_${bgLayer.variation}`);
+            }
         }
     });
 }
+
+
+
 
 
 function updateFactoryFloor() {
@@ -352,20 +386,3 @@ function fadeToBlack(scene, callback) {
       });
     });
   }
-
-  
-
-// TO DO:
-
-// 1. Fade to black and show game over with score
-// 2. Show QR code scoreboard instructions
-// 3. Build a route to handle the scoreboard, and a flat file to StorageEvent
-// 4. Find a way to create a linear story using the background generation system
-// 4. Add rules of indie podcasting to yellow buildings
-// 5. Create business deisgn center
-// 6. Slow down the score
-// 7. Add an intro where Alitu is chasing a truck throwing things off the back
-// 8. Make some of the obstacles good and others bad
-
-
-// A green van, dropping green droids and flying joe rogans
