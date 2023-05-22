@@ -13,8 +13,8 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 500 },
-            debug: true,
+            gravity: { y: 700 },
+            debug: false,
         },
     },
     scene: {
@@ -32,6 +32,9 @@ function preload() {
     loadAlitu.call(this);
     loadFactoryFloor.call(this);
     loadObstacles.call(this);
+
+    // Load flying obstacle
+    this.load.image('flying_obstacle', 'assets/roejogan.png');
 
     // Load game over background image
     this.load.image('game_over_bg', 'assets/game_over_bg.png');
@@ -184,7 +187,7 @@ function updateAlitu() {
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
     if (this.spaceKey.isDown && this.alitu.body.onFloor()) {
-        this.alitu.setVelocityY(-550);
+        this.alitu.setVelocityY(-420);
     }
 
     if (this.alitu.body.onFloor() && this.alitu.anims.currentAnim.key !== 'run') {
@@ -273,11 +276,11 @@ function getRandomSpawnDelay() {
 
 function createUI() {
     const topMargin = config.scale.height * 0.1;
-    this.scoreText = this.add.text(config.scale.width / 2, topMargin, score, { fontFamily: 'arcadegamer', fontSize: '32px', fill: '#ffffff', lineHeight: '42px' }).setOrigin(0.5);
+    this.scoreText = this.add.text(config.scale.width / 2, topMargin, score, { fontFamily: 'arcadegamer', fontSize: '46px', fill: '#ffffff', lineHeight: '42px' }).setOrigin(0.5);
     this.scoreText.setPadding(10,10,10,10);
 
     const highscore = localStorage.getItem('highscore') || 0;
-    this.highscoreText = this.add.text(config.scale.width / 2, topMargin + 40, `hi: ${highscore}`, { fontFamily: 'arcadegamer', fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
+    this.highscoreText = this.add.text(config.scale.width / 2, topMargin + 50, `hi: ${highscore}`, { fontFamily: 'arcadegamer', fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
 }
 
 // Update game objects
@@ -398,8 +401,8 @@ async function gameOver() {
         const topMargin = config.scale.height * 0.1;
         const bottomMargin = config.scale.height - (config.scale.height * 0.1);
 
-        this.finalScoreText = this.add.text(config.scale.width / 2, topMargin, score, { fontFamily: 'arcadegamer', fontSize: '36px', fill: '#ffffff' }).setOrigin(0.5);
-        this.playerHighscoreText = this.add.text(config.scale.width / 2, topMargin + 40, `hi: ${highscore}`, { fontFamily: 'arcadegamer', fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
+        this.finalScoreText = this.add.text(config.scale.width / 2, topMargin, score, { fontFamily: 'arcadegamer', fontSize: '48px', fill: '#ffffff' }).setOrigin(0.5);
+        this.playerHighscoreText = this.add.text(config.scale.width / 2, topMargin + 60, `hi: ${highscore}`, { fontFamily: 'arcadegamer', fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
 
         this.gameOverText = this.add.text(config.scale.width / 2, topMargin + 180, score > highscore ? 'New high score!' : 'Game Over', { fontFamily: 'arcadegamer', fontSize: '96px', fill: '#ffffff' }).setOrigin(0.5);
         
