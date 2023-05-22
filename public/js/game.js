@@ -14,8 +14,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 800 },
-            debug: true,
-            
+            debug: false,
         },
     },
     scene: {
@@ -24,8 +23,8 @@ const config = {
         update: update,
     },
 };
-const game = new Phaser.Game(config);
 
+const game = new Phaser.Game(config);
 
 function preload() {
     // Load game assets here
@@ -33,6 +32,12 @@ function preload() {
     loadAlitu.call(this);
     loadFactoryFloor.call(this);
     loadObstacles.call(this);
+
+    // Load game over background image
+    this.load.image('game_over_bg', 'assets/game_over_bg.png');
+    // Load the QR code image
+    this.load.image('qr_code', 'assets/qr_code.png');
+
 }
 
 function create() {
@@ -49,15 +54,12 @@ function create() {
     this.spawnDelay = getRandomSpawnDelay(); // Initialize the spawn delay
 }
 
-
-
 function update() {
     if (isGameOver) {
         return;
     }
 
     handleObstacleSpawn.call(this);
-
     updateBackgroundLayers.call(this);
     updateFactoryFloor.call(this);
     updateObstacles.call(this);
@@ -78,7 +80,6 @@ function loadBackgroundLayers() {
         }
     }
 }
-
 
 function loadAlitu() {
     this.load.spritesheet('alitu_run', 'assets/alitu_run.png', { frameWidth: 38, frameHeight: 64 });
@@ -171,7 +172,6 @@ function createAlitu() {
     this.alitu.play('run');
 }
 
-
 function createFactoryFloor() {
     const floorTileWidth = 32;
     const floorTileHeight = 32;
@@ -200,14 +200,17 @@ function spawnObstacle() {
 
 }
 
-
 function createObstacles() {
     this.obstacles = this.physics.add.group();
 }
 
-
 function createUI() {
-    this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#ffffff' });
+    const topMargin = config.scale.height * 0.1;
+    this.scoreText = this.add.text(config.scale.width / 2, topMargin, score, { fontFamily: 'arcadegamer', fontSize: '24px', fill: '#ffffff', lineHeight: '42px' }).setOrigin(0.5);
+    this.scoreText.setPadding(10,10,10,10);
+
+    const highscore = localStorage.getItem('highscore') || 0;
+    this.highscoreText = this.add.text(config.scale.width / 2, topMargin + 20, `hi: ${highscore}`, { fontFamily: 'arcadegamer', fontSize: '10px', fill: '#ffffff' }).setOrigin(0.5);
 }
 
 // Update game objects
@@ -235,10 +238,6 @@ function updateBackgroundLayers() {
         }
     });
 }
-
-
-
-
 
 function updateFactoryFloor() {
     this.floor.children.iterate(function (child) {
@@ -274,14 +273,11 @@ function updateAlitu() {
     }
 }
 
-
-
-
-
 function updateUI() {
     score += 1;
-    this.scoreText.setText('Score: ' + score);
+    this.scoreText.setText(score);
 }
+
 
 function alituHitObstacle() {
     if (!isGameOver) {
@@ -300,89 +296,141 @@ async function displayQRCode(data, blackRect) {
   
     // Remove the existing 'qr_code' texture if it exists
     if (this.textures.exists('qr_code')) {
-      this.textures.remove('qr_code');
+        this.textures.remove('qr_code');
     }
   
     // Add the new 'qr_code' texture
     this.textures.addBase64('qr_code', qrImageDataUri).once('onload', () => {
-      // Update the QR code image position
-      const qrImage = this.add.image(config.scale.width * 0.55, this.qrInstructionText.y + this.qrInstructionText.height + 10, 'qr_code');
-      qrImage.setOrigin(0, 0);
-      qrImage.setScale(0.5);
-      qrImage.setInteractive();
-      qrImage.on('pointerdown', () => {
-        blackRect.destroy();
-        qrImage.destroy();
-        this.gameOverText.destroy();
-        this.finalScoreText.destroy();
-        this.qrInstructionText.destroy();
-        this.scene.restart();
-        score = 0;
-        isGameOver = false;
-      });
+        // Update the QR code image position
+        const qrImage = this.add.image(config.scale.width * 0.5, config.scale.height * 0.6, 'qr_code'); // Moved the QR code down
+        qrImage.setOrigin(0.5, 0.5);
+        qrImage.setScale(0.5);
+        qrImage.setInteractive();
+        qrImage.on('pointerdown', () => {
+            blackRect.destroy();
+            qrImage.destroy();
+            this.gameOverText.destroy();
+            this.finalScoreText.destroy();
+            this.qrInstructionText.destroy();
+            this.scene.restart();
+            score = 0;
+            isGameOver = false;
+        });
     }, this);
 }
 
-  
-
-function fadeToBlack(scene, callback) {
-    const blackRect = scene.add.rectangle(0, 0, config.scale.width, config.scale.height, 0x000000);
+function fadeToBlack(scene, callback, color) {
+    const blackRect = scene.add.rectangle(0, 0, config.scale.width, config.scale.height, color);
     blackRect.setOrigin(0, 0);
     blackRect.alpha = 0;
     scene.tweens.add({
-      targets: blackRect,
-      alpha: 1,
-      duration: 1000,
-      onComplete: () => {
-        callback(blackRect); // Call the provided callback function after the fade in is complete
-      },
+        targets: blackRect,
+        alpha: { from: 0, to: 0.95 },
+        duration: 1000,
+        onComplete: () => {
+            callback(blackRect);
+        },
     });
-  }
+}
 
-  function createSpacebarMessage(scene) {
-    const spacebarBg = scene.add.rectangle(config.scale.width / 2, config.scale.height * 0.9, config.scale.width * 0.5, 40, 0xffffff);
-    spacebarBg.setOrigin(0.5, 0.5);
-  
-    const spacebarText = scene.add.text(config.scale.width / 2, config.scale.height * 0.9, 'Next player, press the button', { fontSize: '16px', fill: '#000000' });
-    spacebarText.setOrigin(0.5, 0.5);
-  
-    return { spacebarBg, spacebarText };
-  }
+ class TweenHelper {
+    static flashElement(scene, element, repeat = true, easing = 'Linear', overallDuration = 750, visiblePauseDuration = 250) {
+        if (scene && element) {
+            let flashDuration = overallDuration - visiblePauseDuration / 2;
 
-  async function gameOver() {
+            scene.tweens.timeline({
+                tweens: [
+                    {
+                        targets: element,
+                        duration: 0,
+                        alpha: 0,
+                        ease: easing
+                    },
+                    {
+                        targets: element,
+                        duration: flashDuration,
+                        alpha: 1,
+                        ease: easing
+                    },
+                    {
+                        targets: element,
+                        duration: visiblePauseDuration,
+                        alpha: 1,
+                        ease: easing
+                    },
+                    {
+                        targets: element,
+                        duration: flashDuration,
+                        alpha: 0,
+                        ease: easing,
+                        onComplete: () => {
+                            if (repeat === true) {
+                                this.flashElement(scene, element);
+                            }
+                        }
+                    }
+                ]
+            });
+        }
+    }
+}
+
+async function gameOver() {
     this.physics.pause();
     this.alitu.play('run', false);
-  
-    // Add the fade to black effect before displaying the game over text
-    await new Promise((resolve) => fadeToBlack(this, resolve)).then((blackRect) => {
-      this.gameOverText = this.add.text(config.scale.width * 0.05, config.scale.height / 4, 'Game Over', { fontSize: '64px', fill: '#ff0000' }).setOrigin(0, 0.5);
-      this.finalScoreText = this.add.text(config.scale.width * 0.05, config.scale.height / 4 + 70, 'Score: ' + score, { fontSize: '32px', fill: '#ffffff' }).setOrigin(0, 0.5);
-  
-      const url = `https://colingray663784.typeform.com/to/NjjCTE6D#score=${score}`;
-      displayQRCode.call(this, url, blackRect);
-  
-      this.qrInstructionText = this.add.text(config.scale.width * 0.55, config.scale.height / 4, 'Scan the QR code below to join the leaderboard:', { fontSize: '16px', fill: '#ffffff', wordWrap: { width: config.scale.width * 0.4 } }).setOrigin(0, 0.5);
-  
-      // Get the bounds of the qrInstructionText
-      const instructionsBounds = this.qrInstructionText.getBounds();
 
-      // Update the QR code image position
-      this.textures.once('addtexturekey', () => {
-        const qrImage = this.add.image(instructionsBounds.x, instructionsBounds.y + instructionsBounds.height + 10, 'qr_code');
-        qrImage.setOrigin(0, 0);
-        qrImage.setScale(0.5);
-        qrImage.setInteractive();
-      }, this);
-  
-      // Enable the spacebar key to restart the game
-      this.input.keyboard.on('keydown-SPACE', () => {
-        blackRect.destroy();
-        this.gameOverText.destroy();
-        this.finalScoreText.destroy();
-        this.qrInstructionText.destroy();
-        this.scene.restart();
-        score = 0;
-        isGameOver = false;
-      });
+    let highscore = localStorage.getItem('highscore');
+    let fadeColor = highscore && score > highscore ? 0x127e1a : 0xCF372F;
+
+    await new Promise((resolve) => fadeToBlack(this, resolve, fadeColor)).then((blackRect) => {
+        // Grouped the gameover and qr code message together at the top of the screen with a little margin.
+        const topMargin = config.scale.height * 0.1;
+        const bottomMargin = config.scale.height - (config.scale.height * 0.1);
+        this.gameOverText = this.add.text(config.scale.width / 2, topMargin + 60, score > highscore ? 'New high score!' : 'Game Over', { fontFamily: 'arcadegamer', fontSize: '38px', fill: '#ffffff' }).setOrigin(0.5);
+        this.finalScoreText = this.add.text(config.scale.width / 2, topMargin, score, { fontFamily: 'arcadegamer', fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
+        this.qrInstructionText = this.add.text(config.scale.width / 2, topMargin + 100, 'Scan to join the leaderboard', { fontFamily: 'arcadegamer', fontSize: '14px', fill: '#FFED2B', wordWrap: { width: config.scale.width * 0.6 } }).setOrigin(0.5); // Increased wordWrap width to 60%
+        //this.playerNumberText = this.add.text(config.scale.width / 2, topMargin + 40, 'Player 1', { fontFamily: 'arcadegamer', fontSize: '12px', fill: '#FFED2B' }).setOrigin(0.5);
+        this.playerHighscoreText = this.add.text(config.scale.width / 2, topMargin + 20, `hi: ${highscore}`, { fontFamily: 'arcadegamer', fontSize: '10px', fill: '#ffffff' }).setOrigin(0.5);
+        const url = `https://colingray663784.typeform.com/to/NjjCTE6D#score=${score}`;
+        displayQRCode.call(this, url, blackRect); // Assuming this generates the 'qr_code' texture
+
+        if (score > highscore) {
+            localStorage.setItem('highscore', score);
+            this.playerHighscoreText.setText(`hi: ${score}`);
+        }
+
+        // Get the bounds of the qrInstructionText
+        const instructionsBounds = this.qrInstructionText.getBounds();
+
+        const pressToPlayText = this.add.text(config.scale.width / 2, bottomMargin, 'PRESS BUTTON TO PLAY', { fontFamily: 'arcadegamer', fontSize: '16px', fill: '#FFED2B' }).setOrigin(0.5); // Added a flashing text at the bottom center of the screen
+
+        // Make the 'press to play' text flash
+        TweenHelper.flashElement(this, pressToPlayText);
+
+
+        // Update the QR code image position and scale to be perfectly in the center of the screen
+        this.textures.once('addtexturekey', () => {
+            const qrw = config.scale.width / 2;
+            const qrh = config.scale.height / 2;
+            const qrImage = this.add.image(qrw, qrh, 'qr_code');
+            qrImage.setOrigin(0.5);
+            qrImage.setScale(0.3);
+            qrImage.setInteractive();
+        }, this);
+
+        // Enable the spacebar key to restart the game
+        this.input.keyboard.on('keydown-SPACE', () => {
+            blackRect.destroy();
+            this.gameOverText.destroy();
+            this.finalScoreText.destroy();
+            this.qrInstructionText.destroy();
+            this.scene.restart();
+            score = 0;
+            isGameOver = false;
+        });
     });
-  }
+}
+
+
+
+
