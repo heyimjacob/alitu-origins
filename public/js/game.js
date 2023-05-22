@@ -77,7 +77,9 @@ function update() {
     updateAlitu.call(this);
     updateUI.call(this);
 
-    if (score >= 200) {
+    let highscore = localStorage.getItem('highscore');
+
+    if (score >= highscore) {
         this.flyingObstacleSpawnCounter++;
 
         if (this.flyingObstacleSpawnCounter >= this.flyingObstacleSpawnDelay) {
@@ -265,8 +267,8 @@ function spawnObstacle() {
 }
 
 function spawnFlyingObstacle() {
-    const minHeight = 200; // Minimum height (in pixels from the top)
-    const maxHeight = 600; // Maximum height (in pixels from the top)
+    const minHeight = 600; // Minimum height (in pixels from the top)
+    const maxHeight = 200; // Maximum height (in pixels from the top)
     const randomHeight = Phaser.Math.Between(minHeight, maxHeight);
 
     const flyingObstacle = this.flyingObstacles.create(config.scale.width, randomHeight, 'roejogan');
@@ -305,15 +307,8 @@ function handleObstacleSpawn() {
         this.spawnDelay = getRandomSpawnDelay();
         this.spawnObstacle();
     }
-
-    this.flyingObstacleSpawnCounter++;
-
-    if (this.flyingObstacleSpawnCounter >= this.flyingObstacleSpawnDelay) {
-        this.flyingObstacleSpawnCounter = 0;
-        this.flyingObstacleSpawnDelay = getRandomFlyingObstacleSpawnDelay();
-        this.spawnFlyingObstacle();
-    }    
 }
+
 
 
 function getRandomSpawnDelay() {
@@ -323,8 +318,8 @@ function getRandomSpawnDelay() {
 }
 
 function getRandomFlyingObstacleSpawnDelay() {
-    const minDelay = 800; // 5 seconds (assuming 60 FPS)
-    const maxDelay = 1800; // 10 seconds (assuming 60 FPS)
+    const minDelay = 300; // 5 seconds (assuming 60 FPS)
+    const maxDelay = 900; // 10 seconds (assuming 60 FPS)
     return Phaser.Math.Between(minDelay, maxDelay);
 }
 
