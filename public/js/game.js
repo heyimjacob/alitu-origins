@@ -1,4 +1,6 @@
 const FLOOR_OBSTACLE_SPEED = -600;
+const FLYING_OBSTACLE_SPEED = -900; // Set the flying obstacle speed
+
 let score = 0;
 let isGameOver = false;
 const config = {
@@ -13,8 +15,8 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 700 },
-            debug: false,
+            gravity: { y: 1200 },
+            debug: true,
         },
     },
     scene: {
@@ -33,13 +35,13 @@ function preload() {
     loadFactoryFloor.call(this);
     loadObstacles.call(this);
 
-    // Load flying obstacle
-    this.load.image('flying_obstacle', 'assets/roejogan.png');
-
     // Load game over background image
     this.load.image('game_over_bg', 'assets/game_over_bg.png');
 
+    // Load flying obstacle
+    this.load.image('roejogan', 'assets/roejogan.png');
 }
+
 
 function create() {
     // Set up game objects here
@@ -53,6 +55,14 @@ function create() {
     this.spawnObstacle = spawnObstacle.bind(this); // Added this line
     this.obstacleSpawnCounter = getRandomSpawnDelay();
     this.spawnDelay = getRandomSpawnDelay(); // Initialize the spawn delay
+
+    // Set up flying obstacles
+    this.flyingObstacles = this.physics.add.group();
+
+    // Bind the new spawn functions
+    this.spawnFlyingObstacle = spawnFlyingObstacle.bind(this);
+    this.flyingObstacleSpawnCounter = getRandomSpawnDelay();
+    this.flyingObstacleSpawnDelay = getRandomFlyingObstacleSpawnDelay();
 }
 
 function update() {
@@ -63,6 +73,20 @@ function update() {
     handleObstacleSpawn.call(this);
     updateBackgroundLayers.call(this);
     updateFactoryFloor.call(this);
+    updateObstacles.call(this);
+    updateAlitu.call(this);
+    updateUI.call(this);
+
+    if (score >= 200) {
+        this.flyingObstacleSpawnCounter++;
+
+        if (this.flyingObstacleSpawnCounter >= this.flyingObstacleSpawnDelay) {
+            this.flyingObstacleSpawnCounter = 0;
+            this.flyingObstacleSpawnDelay = getRandomSpawnDelay();
+            this.spawnFlyingObstacle();
+        }
+    }
+
     updateObstacles.call(this);
     updateAlitu.call(this);
     updateUI.call(this);
@@ -187,7 +211,7 @@ function updateAlitu() {
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
     if (this.spaceKey.isDown && this.alitu.body.onFloor()) {
-        this.alitu.setVelocityY(-420);
+        this.alitu.setVelocityY(-620);
     }
 
     if (this.alitu.body.onFloor() && this.alitu.anims.currentAnim.key !== 'run') {
@@ -240,6 +264,25 @@ function spawnObstacle() {
 
 }
 
+function spawnFlyingObstacle() {
+    const minHeight = 200; // Minimum height (in pixels from the top)
+    const maxHeight = 600; // Maximum height (in pixels from the top)
+    const randomHeight = Phaser.Math.Between(minHeight, maxHeight);
+
+    const flyingObstacle = this.flyingObstacles.create(config.scale.width, randomHeight, 'roejogan');
+
+    flyingObstacle.setVelocityX(FLYING_OBSTACLE_SPEED);
+    flyingObstacle.setOrigin(0, 0);
+    flyingObstacle.setScale(1);
+    flyingObstacle.body.setAllowGravity(false); // Prevent gravity from affecting this obstacle
+
+    this.physics.add.collider(this.alitu, flyingObstacle, alituHitObstacle, null, this);
+    console.log("Flying Obstacle spawned:", flyingObstacle);
+}
+
+
+
+
 function createObstacles() {
     this.obstacles = this.physics.add.group();
 }
@@ -259,16 +302,32 @@ function handleObstacleSpawn() {
 
     if (this.obstacleSpawnCounter >= this.spawnDelay) {
         this.obstacleSpawnCounter = 0;
-        this.spawnDelay = getRandomSpawnDelay(); // Update the spawn delay
+        this.spawnDelay = getRandomSpawnDelay();
         this.spawnObstacle();
     }
+
+    this.flyingObstacleSpawnCounter++;
+
+    if (this.flyingObstacleSpawnCounter >= this.flyingObstacleSpawnDelay) {
+        this.flyingObstacleSpawnCounter = 0;
+        this.flyingObstacleSpawnDelay = getRandomFlyingObstacleSpawnDelay();
+        this.spawnFlyingObstacle();
+    }    
 }
+
 
 function getRandomSpawnDelay() {
     const minDelay = 60; // 1 second (assuming 60 FPS)
     const maxDelay = 180; // 3 seconds (assuming 60 FPS)
     return Phaser.Math.Between(minDelay, maxDelay);
 }
+
+function getRandomFlyingObstacleSpawnDelay() {
+    const minDelay = 800; // 5 seconds (assuming 60 FPS)
+    const maxDelay = 1800; // 10 seconds (assuming 60 FPS)
+    return Phaser.Math.Between(minDelay, maxDelay);
+}
+
 
 // ------ UI ------- 
 
