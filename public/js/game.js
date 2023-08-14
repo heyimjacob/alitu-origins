@@ -375,6 +375,7 @@ function gameOver() {
 
         if (score > highscore) {
             localStorage.setItem('highscore', score);
+            drawLeaderboardEntry.call(this);
         }
 
         this.input.keyboard.on('keydown-SPACE', () => {
@@ -399,3 +400,49 @@ function fadeToBlack(scene, callback, color) {
         },
     });
 }
+
+function drawLeaderboardEntry() {
+    const entryBox = this.add.graphics();
+    entryBox.lineStyle(4, 0xff0000, 1);
+    entryBox.fillStyle(0xffffff, 1);
+    entryBox.fillRect(100, 200, 320, 50);
+    entryBox.strokeRect(100, 200, 320, 50);
+
+    const text = this.add.text(110, 210, [], { font: '32px Arial', fill: '#000' });
+
+    this.input.keyboard.on('keydown', function(event) {
+        if (event.keyCode === 8 && text.text.length > 0) {
+            const txt = text.text.substr(0, text.text.length - 1);
+            text.setText(txt);
+        } else if (event.keyCode === 13) {
+            // Enter key, save the score and name
+            saveToLeaderboard(text.text, score);
+        } else if ((event.keyCode >= 48 && event.keyCode <= 90) || event.keyCode === 32) {
+            text.setText(text.text + event.key);
+        }
+    });
+}
+
+async function saveToLeaderboard(username, score) {
+    try {
+      const response = await fetch('/api/scoreboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, score }),
+      });
+  
+      // If response is not in the 2xx range, reject the promise
+      if (!response.ok) {
+        const responseData = await response.json();
+        throw new Error(responseData.message || 'Failed to save score');
+      }
+  
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('There was a problem saving the score:', error.message);
+      throw error;
+    }
+  }
